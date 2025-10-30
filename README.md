@@ -63,12 +63,20 @@ Gmail API → Gemini 2.0 Flash → Django Backend → PostgreSQL/CSV Storage →
 
 ## 🖼️ Screenshots
 
-| Dashboard                           | Applications Page                              | CSV Manager                             |
-| ----------------------------------- | ---------------------------------------------- | --------------------------------------- |
-| ![Dashboard](images/dashboard.jpeg) | ![Applications Page](images/applications.jpeg) | ![CSV Manager](images/csv-manager.jpeg) |
+### 📊 Dashboard
 
+![Dashboard](images/dashboard.jpeg)
+
+### 📝 Applications Page
+
+![Applications Page](images/applications.jpeg)
+
+### 📂 CSV Manager
+
+![CSV Manager](images/csv-manager.jpeg)
 
 ---
+ 
 
 ## 📈 Example Statistics
 
