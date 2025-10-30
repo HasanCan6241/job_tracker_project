@@ -1,0 +1,554 @@
+{% extends 'jobs/base.html' %}
+{% load static %}
+
+{% block title %}Sistem Ayarları{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .settings-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .settings-header {
+        border-bottom: 2px solid #f8f9fa;
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .settings-section {
+        margin-bottom: 2rem;
+    }
+    
+    .settings-section h4 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .settings-icon {
+        width: 20px;
+        height: 20px;
+        opacity: 0.7;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        padding: 0.75rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .btn-group-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-secondary:hover {
+        background: #5a6268;
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+    
+    .btn-warning {
+        background: #ffc107;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        color: #212529;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-warning:hover {
+        background: #e0a800;
+        transform: translateY(-1px);
+    }
+    
+    .btn-info {
+        background: #17a2b8;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        color: white;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-info:hover {
+        background: #138496;
+        transform: translateY(-1px);
+    }
+    
+    .current-settings {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        border-left: 4px solid #007bff;
+    }
+    
+    .settings-history {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+    
+    .history-item {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #dee2e6;
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .history-item:last-child {
+        border-bottom: none;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .loading {
+        display: none;
+    }
+    
+    .loading.show {
+        display: inline-block;
+    }
+    
+    @media (max-width: 768px) {
+        .settings-container {
+            margin: 0 1rem;
+        }
+        
+        .settings-card {
+            padding: 1.5rem;
+        }
+        
+        .btn-group-actions {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="settings-card">
+        <div class="settings-header">
+            <h2>
+                <i class="fas fa-cogs settings-icon"></i>
+                Sistem Ayarları
+            </h2>
+            <p class="text-muted">Gmail ve Gemini servislerinin yapılandırma parametrelerini buradan yönetebilirsiniz.</p>
+        </div>
+
+        <!-- Mesajlar -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Mevcut Ayarlar Özeti -->
+        {% if current_settings %}
+        <div class="current-settings">
+            <h5><i class="fas fa-info-circle"></i> Mevcut Aktif Ayarlar</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <small><strong>E-posta Tarama:</strong> {{ current_settings.email_scan_days }} gün</small><br>
+                    <small><strong>Tarama Limiti:</strong> {{ current_settings.email_scan_limit|floatformat:0 }} e-posta</small><br>
+                    <small><strong>Batch Boyutu:</strong> {{ current_settings.email_batch_size }}</small>
+                </div>
+                <div class="col-md-6">
+                    <small><strong>API Key:</strong> {% if current_settings.gemini_api_key %}Tanımlı ({{ current_settings.gemini_api_key|length }} karakter){% else %}Tanımlı değil{% endif %}</small><br>
+                    <small><strong>Cache TTL:</strong> {{ current_settings.gemini_cache_ttl }} dakika</small><br>
+                    <small><strong>Son Güncelleme:</strong> {{ current_settings.updated_at|date:"d.m.Y H:i" }}</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Ayarlar Formu -->
+        <form method="post" id="settingsForm">
+            {% csrf_token %}
+            
+            <!-- Gmail Ayarları -->
+            <div class="settings-section">
+                <h4>
+                    <i class="fas fa-envelope settings-icon"></i>
+                    Gmail API Ayarları
+                </h4>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.email_scan_days.id_for_label }}" class="form-label">
+                                {{ form.email_scan_days.label }}
+                            </label>
+                            {{ form.email_scan_days }}
+                            {% if form.email_scan_days.help_text %}
+                                <div class="help-text">{{ form.email_scan_days.help_text }}</div>
+                            {% endif %}
+                            {% if form.email_scan_days.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.email_scan_days.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.email_scan_limit.id_for_label }}" class="form-label">
+                                {{ form.email_scan_limit.label }}
+                            </label>
+                            {{ form.email_scan_limit }}
+                            {% if form.email_scan_limit.help_text %}
+                                <div class="help-text">{{ form.email_scan_limit.help_text }}</div>
+                            {% endif %}
+                            {% if form.email_scan_limit.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.email_scan_limit.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.email_batch_size.id_for_label }}" class="form-label">
+                                {{ form.email_batch_size.label }}
+                            </label>
+                            {{ form.email_batch_size }}
+                            {% if form.email_batch_size.help_text %}
+                                <div class="help-text">{{ form.email_batch_size.help_text }}</div>
+                            {% endif %}
+                            {% if form.email_batch_size.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.email_batch_size.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gemini Ayarları -->
+            <div class="settings-section">
+                <h4>
+                    <i class="fas fa-robot settings-icon"></i>
+                    Gemini AI Ayarları
+                </h4>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label for="{{ form.gemini_api_key.id_for_label }}" class="form-label">
+                                {{ form.gemini_api_key.label }}
+                            </label>
+                            {{ form.gemini_api_key }}
+                            {% if form.gemini_api_key.help_text %}
+                                <div class="help-text">{{ form.gemini_api_key.help_text }}</div>
+                            {% endif %}
+                            {% if form.gemini_api_key.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.gemini_api_key.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.gemini_cache_ttl.id_for_label }}" class="form-label">
+                                {{ form.gemini_cache_ttl.label }}
+                            </label>
+                            {{ form.gemini_cache_ttl }}
+                            {% if form.gemini_cache_ttl.help_text %}
+                                <div class="help-text">{{ form.gemini_cache_ttl.help_text }}</div>
+                            {% endif %}
+                            {% if form.gemini_cache_ttl.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.gemini_cache_ttl.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Butonlar -->
+            <div class="btn-group-actions">
+                <button type="button" class="btn btn-warning" onclick="testSettings()">
+                    <i class="fas fa-flask"></i>
+                    <span class="loading" id="testLoading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                    Ayarları Test Et
+                </button>
+
+                <button type="button" class="btn btn-info" onclick="resetSettings()">
+                    <i class="fas fa-undo"></i>
+                    <span class="loading" id="resetLoading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                    Sıfırla
+                </button>
+
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    Geri Dön
+                </a>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    <span class="loading" id="saveLoading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                    Kaydet
+                </button>
+            </div>
+        </form>
+
+        <!-- Ayar Geçmişi -->
+        {% if settings_history %}
+        <div class="settings-history">
+            <h5><i class="fas fa-history"></i> Son Ayar Değişiklikleri</h5>
+            {% for setting in settings_history %}
+                <div class="history-item">
+                    <strong>{{ setting.updated_at|date:"d.m.Y H:i" }}</strong>
+                    - Tarama: {{ setting.email_scan_days }} gün,
+                    Limit: {{ setting.email_scan_limit|floatformat:0 }},
+                    Cache: {{ setting.gemini_cache_ttl }}dk
+                    {% if setting.is_active %}
+                        <span class="badge bg-success">Aktif</span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Test Sonuçları Modal -->
+<div class="modal fade" id="testResultsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test Sonuçları</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="testResultsBody">
+                <!-- Test sonuçları buraya gelecek -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Form gönderimi için loading göster
+    document.getElementById('settingsForm').addEventListener('submit', function() {
+        document.getElementById('saveLoading').classList.add('show');
+    });
+
+    // Ayarları test et
+    function testSettings() {
+        const loadingEl = document.getElementById('testLoading');
+        loadingEl.classList.add('show');
+
+        fetch('{% url "test_settings" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingEl.classList.remove('show');
+            showTestResults(data);
+        })
+        .catch(error => {
+            loadingEl.classList.remove('show');
+            alert('Test edilirken hata oluştu: ' + error);
+        });
+    }
+
+    // Test sonuçlarını göster
+    function showTestResults(data) {
+        const resultsBody = document.getElementById('testResultsBody');
+
+        if (data.status === 'success') {
+            let html = '<div class="row">';
+
+            // Gmail ayarları
+            html += '<div class="col-12 mb-3">';
+            html += '<h6><i class="fas fa-envelope text-primary"></i> Gmail Ayarları</h6>';
+            html += '<div class="bg-light p-3 rounded">';
+            html += `<small><strong>Tarama Günü:</strong> ${data.results.gmail_settings.scan_days}</small><br>`;
+            html += `<small><strong>Tarama Limiti:</strong> ${data.results.gmail_settings.scan_limit.toLocaleString()}</small><br>`;
+            html += `<small><strong>Batch Boyutu:</strong> ${data.results.gmail_settings.batch_size}</small><br>`;
+            html += `<span class="badge bg-success">${data.results.gmail_settings.status}</span>`;
+            html += '</div></div>';
+
+            // Gemini ayarları
+            html += '<div class="col-12 mb-3">';
+            html += '<h6><i class="fas fa-robot text-info"></i> Gemini Ayarları</h6>';
+            html += '<div class="bg-light p-3 rounded">';
+            html += `<small><strong>API Key Uzunluğu:</strong> ${data.results.gemini_settings.api_key_length} karakter</small><br>`;
+            html += `<small><strong>API Key Geçerli:</strong> ${data.results.gemini_settings.api_key_valid ? 'Evet' : 'Hayır'}</small><br>`;
+            html += `<small><strong>Cache TTL:</strong> ${data.results.gemini_settings.cache_ttl} dakika</small><br>`;
+            const statusClass = data.results.gemini_settings.status === 'OK' ? 'success' : 'danger';
+            html += `<span class="badge bg-${statusClass}">${data.results.gemini_settings.status}</span>`;
+            html += '</div></div>';
+
+            html += '</div>';
+            resultsBody.innerHTML = html;
+        } else {
+            resultsBody.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+        }
+
+        new bootstrap.Modal(document.getElementById('testResultsModal')).show();
+    }
+
+    // Ayarları sıfırla
+    function resetSettings() {
+        if (!confirm('Tüm ayarları varsayılan değerlere sıfırlamak istediğinizden emin misiniz?')) {
+            return;
+        }
+
+        const loadingEl = document.getElementById('resetLoading');
+        loadingEl.classList.add('show');
+
+        fetch('{% url "reset_settings" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingEl.classList.remove('show');
+            if (data.status === 'success') {
+                location.reload(); // Sayfayı yenile
+            } else {
+                alert('Sıfırlama hatası: ' + data.message);
+            }
+        })
+        .catch(error => {
+            loadingEl.classList.remove('show');
+            alert('Sıfırlama hatası: ' + error);
+        });
+    }
+
+    // Form validasyonu
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('settingsForm');
+        const inputs = form.querySelectorAll('input[type="number"]');
+
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                const min = parseInt(this.getAttribute('min'));
+                const max = parseInt(this.getAttribute('max'));
+
+                if (value < min || value > max) {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

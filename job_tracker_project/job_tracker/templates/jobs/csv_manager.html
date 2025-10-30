@@ -1,0 +1,174 @@
+{% extends 'jobs/base.html' %}
+{% load static %}
+
+{% block title %}CSV Dosya Yöneticisi{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>CSV Dosya Yöneticisi</h1>
+                <div>
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Dashboard'a Dön
+                    </a>
+                    <a href="{% url 'sync_emails' %}" class="btn btn-primary">
+                        <i class="fas fa-sync"></i> Yeni CSV Oluştur
+                    </a>
+                </div>
+            </div>
+
+            <!-- İstatistikler -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5>Toplam CSV Dosyası</h5>
+                            <h2>{{ total_files }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CSV Dosyaları Tablosu -->
+            <div class="card">
+                <div class="card-header">
+                    <h5>CSV Dosyaları</h5>
+                </div>
+                <div class="card-body">
+                    {% if csv_files %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Dosya Adı</th>
+                                    <th>Oluşturma Tarihi</th>
+                                    <th>E-posta Sayısı</th>
+                                    <th>Dosya Boyutu</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for csv_file in csv_files %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-file-csv text-success"></i>
+                                        {{ csv_file.filename }}
+                                    </td>
+                                    <td>{{ csv_file.created_at|date:"d.m.Y H:i:s" }}</td>
+                                    <td>
+                                        <span class="badge badge-primary">{{ csv_file.row_count }}</span>
+                                    </td>
+                                    <td>{{ csv_file.size_mb }} MB</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'view_csv_content' csv_file.filename %}" 
+                                               class="btn btn-info btn-sm" title="İçeriği Görüntüle">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'download_csv' csv_file.filename %}" 
+                                               class="btn btn-success btn-sm" title="İndir">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            <form method="post" action="{% url 'process_from_csv' %}" 
+                                                  style="display: inline;" 
+                                                  onsubmit="return confirm('Bu CSV dosyasını işlemek istediğinizden emin misiniz?')">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="csv_filename" value="{{ csv_file.filename }}">
+                                                <button type="submit" class="btn btn-primary btn-sm" title="İş Başvuruları İçin İşle">
+                                                    <i class="fas fa-cogs"></i>
+                                                </button>
+                                            </form>
+                                            <form method="post" action="{% url 'delete_csv' csv_file.filename %}" 
+                                                  style="display: inline;" 
+                                                  onsubmit="return confirm('Bu CSV dosyasını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger btn-sm" title="Sil">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Sayfalama -->
+                    {% if csv_files.has_other_pages %}
+                    <nav aria-label="CSV dosyaları sayfalama">
+                        <ul class="pagination justify-content-center">
+                            {% if csv_files.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">İlk</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ csv_files.previous_page_number }}">Önceki</a>
+                                </li>
+                            {% endif %}
+
+                            <li class="page-item active">
+                                <span class="page-link">
+                                    {{ csv_files.number }} / {{ csv_files.paginator.num_pages }}
+                                </span>
+                            </li>
+
+                            {% if csv_files.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ csv_files.next_page_number }}">Sonraki</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ csv_files.paginator.num_pages }}">Son</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-csv fa-5x text-muted mb-3"></i>
+                        <h4 class="text-muted">Henüz CSV dosyası bulunmuyor</h4>
+                        <p class="text-muted">Gmail'den e-postaları çekerek ilk CSV dosyanızı oluşturun.</p>
+                        <a href="{% url 'sync_emails' %}" class="btn btn-primary">
+                            <i class="fas fa-sync"></i> E-postaları Çek ve CSV Oluştur
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Yardım Kutusu -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6><i class="fas fa-question-circle"></i> CSV Dosyaları Hakkında</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>İşlem Seçenekleri:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-eye text-info"></i> <strong>Görüntüle:</strong> CSV içeriğini web'de görüntüle</li>
+                                <li><i class="fas fa-download text-success"></i> <strong>İndir:</strong> CSV dosyasını bilgisayarınıza indirin</li>
+                                <li><i class="fas fa-cogs text-primary"></i> <strong>İşle:</strong> E-postaları analiz edip iş başvurularını tespit et</li>
+                                <li><i class="fas fa-trash text-danger"></i> <strong>Sil:</strong> CSV dosyasını kalıcı olarak sil</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Dosya Bilgileri:</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Kodlama:</strong> UTF-8 (Türkçe karakter desteği)</li>
+                                <li><strong>Format:</strong> Standart CSV (virgül ayrımlı)</li>
+                                <li><strong>Excel Uyumu:</strong> Evet (UTF-8-BOM ile)</li>
+                                <li><strong>Maksimum İçerik:</strong> E-posta başına 5000 karakter</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

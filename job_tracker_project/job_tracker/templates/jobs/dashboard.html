@@ -1,0 +1,813 @@
+{% extends 'jobs/base.html' %}
+
+{% block title %}Dashboard - İş Başvuru Takip Sistemi{% endblock %}
+
+{% block content %}
+<!-- Loading Overlay for Email Sync -->
+<div id="loading-overlay" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    flex-direction: column;
+">
+    <div style="
+        background: white;
+        padding: 3rem;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        max-width: 400px;
+        width: 90%;
+    ">
+        <div style="
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 2rem;
+            border: 4px solid #e3f2fd;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        "></div>
+
+        <h3 style="
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            font-weight: 600;
+        ">E-postalar Senkronize Ediliyor</h3>
+
+        <div style="
+            width: 100%;
+            height: 8px;
+            background: #e3f2fd;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        ">
+            <div id="progress-bar" style="
+                height: 100%;
+                background: linear-gradient(90deg, #667eea, #764ba2);
+                border-radius: 10px;
+                width: 0%;
+                animation: progress 3s ease-in-out infinite;
+            "></div>
+        </div>
+
+        <p style="color: #666; font-size: 0.9rem;">
+            Lütfen bekleyin, bu işlem birkaç dakika sürebilir...
+        </p>
+    </div>
+</div>
+
+<div class="fade-in">
+    <!-- Header Section -->
+    <div class="card modern-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <div>
+                <h1 style="
+                    font-size: 2.8rem;
+                    font-weight: 800;
+                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    margin-bottom: 0.5rem;
+                    letter-spacing: -0.02em;
+                ">
+                    <i class="fas fa-chart-line" style="margin-right: 0.5rem;"></i> Dashboard
+                </h1>
+                <p style="color: #8892b0; font-size: 1.2rem; font-weight: 400;">İş başvuru sürecinizi takip edin ve analiz edin</p>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button id="sync-email-btn" onclick="startEmailSync()" class="btn btn-primary modern-btn">
+                    <i class="fas fa-sync-alt"></i> E-posta Senkronizasyonu
+                </button>
+                <a href="{% url 'manual_add_application' %}" class="btn btn-secondary modern-btn">
+                    <i class="fas fa-plus"></i> Yeni Başvuru
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+        <!-- Total Applications -->
+        <div class="card modern-card gradient-card" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 2;">
+                <div>
+                    <h3 style="font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem; line-height: 1;">
+                        {{ total_applications }}
+                    </h3>
+                    <p style="opacity: 0.95; font-size: 1.2rem; font-weight: 500;">Toplam Başvuru</p>
+                </div>
+                <div style="font-size: 3.5rem; opacity: 0.8;">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Statistics -->
+        {% for status_name, count in status_counts.items %}
+        <div class="card modern-card status-card" style="position: relative; overflow: hidden;">
+            <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background:
+                {% if status_name == 'Alındı' %}#2196f3
+                {% elif status_name == 'Mülakat' %}#ff9800
+                {% elif status_name == 'Kabul Edildi' %}#4caf50
+                {% elif status_name == 'Reddedildi' %}#f44336
+                {% else %}#9e9e9e{% endif %};"></div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; padding-left: 1rem;">
+                <div>
+                    <h3 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; color: #2d3748;">
+                        {{ count }}
+                    </h3>
+                    <p style="color: #718096; font-size: 1.1rem; font-weight: 500;">{{ status_name }}</p>
+                </div>
+                <div style="font-size: 2.8rem; color:
+                    {% if status_name == 'Alındı' %}#2196f3
+                    {% elif status_name == 'Mülakat' %}#ff9800
+                    {% elif status_name == 'Kabul Edildi' %}#4caf50
+                    {% elif status_name == 'Reddedildi' %}#f44336
+                    {% else %}#9e9e9e{% endif %}; opacity: 0.7;">
+                    {% if status_name == 'Alındı' %}
+                        <i class="fas fa-inbox"></i>
+                    {% elif status_name == 'Mülakat' %}
+                        <i class="fas fa-user-tie"></i>
+                    {% elif status_name == 'Kabul Edildi' %}
+                        <i class="fas fa-check-circle"></i>
+                    {% elif status_name == 'Reddedildi' %}
+                        <i class="fas fa-times-circle"></i>
+                    {% else %}
+                        <i class="fas fa-clock"></i>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Recent Applications and Last Processing -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+        <!-- Recent Applications -->
+        <div class="card modern-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="font-size: 1.6rem; font-weight: 700; color: #2d3748; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-clock" style="color: #667eea;"></i> Son Başvurular
+                </h2>
+                <a href="{% url 'application_list' %}" class="btn btn-outline modern-btn-outline">
+                    <i class="fas fa-eye"></i> Tümünü Gör
+                </a>
+            </div>
+
+            {% if recent_applications %}
+                <div class="modern-table-container">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Şirket</th>
+                                <th>Pozisyon</th>
+                                <th>Durum</th>
+                                <th>Tarih</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for application in recent_applications %}
+                            <tr class="table-row">
+                                <td>
+                                    <a href="{% url 'application_detail' application.pk %}" class="company-link">
+                                        <i class="fas fa-building"></i>
+                                        {{ application.company_name }}
+                                    </a>
+                                </td>
+                                <td class="position-cell">{{ application.position }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ application.status }} modern-badge">
+                                        {{ application.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="date-cell">
+                                    {{ application.created_at|date:"d M Y" }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h3>Henüz başvuru bulunmuyor</h3>
+                    <p>E-posta senkronizasyonu yaparak başlayın</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Last Processing Info -->
+        <div class="card modern-card">
+            <h2 style="font-size: 1.4rem; font-weight: 700; color: #2d3748; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-sync-alt" style="color: #667eea;"></i> Son İşlem
+            </h2>
+
+            {% if last_processing %}
+                <div class="processing-info">
+                    <div class="info-item">
+                        <span class="info-label">Tarih:</span>
+                        <span class="info-value">{{ last_processing.processed_at|date:"d M Y H:i" }}</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="info-label">Taranan E-posta:</span>
+                        <span class="info-value">{{ last_processing.total_emails }}</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="info-label">Bulunan Başvuru:</span>
+                        <span class="info-value success">{{ last_processing.job_applications_found }}</span>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="info-label">Durum:</span>
+                        {% if last_processing.success %}
+                            <span class="status-success">
+                                <i class="fas fa-check-circle"></i> Başarılı
+                            </span>
+                        {% else %}
+                            <span class="status-error">
+                                <i class="fas fa-times-circle"></i> Hatalı
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    {% if not last_processing.success and last_processing.error_message %}
+                        <div class="error-message">
+                            <strong>Hata:</strong> {{ last_processing.error_message|truncatechars:100 }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="empty-state small">
+                    <i class="fas fa-history"></i>
+                    <p>Henüz senkronizasyon yapılmamış</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card modern-card">
+        <h2 style="font-size: 1.6rem; font-weight: 700; color: #2d3748; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-bolt" style="color: #667eea;"></i> Hızlı İşlemler
+        </h2>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+            <button onclick="startEmailSync()" class="action-card primary">
+                <i class="fas fa-sync-alt"></i>
+                <div>
+                    <div class="action-title">E-posta Senkronizasyonu</div>
+                    <div class="action-desc">Gmail'den yeni başvuruları al</div>
+                </div>
+            </button>
+
+             <a href="{% url 'csv_manager' %}" class="btn btn-info">
+                                    <i class="fas fa-file-csv"></i> CSV Dosyalarını Yönet
+             </a>
+
+            <a href="{% url 'manual_add_application' %}" class="action-card secondary">
+                <i class="fas fa-plus"></i>
+                <div>
+                    <div class="action-title">Manuel Başvuru Ekle</div>
+                    <div class="action-desc">Yeni başvuru kaydı oluştur</div>
+                </div>
+            </a>
+
+            <a href="{% url 'application_list' %}" class="action-card success">
+                <i class="fas fa-list"></i>
+                <div>
+                    <div class="action-title">Tüm Başvurular</div>
+                    <div class="action-desc">Detaylı liste görüntüle</div>
+                </div>
+            </a>
+        </div>
+
+    </div>
+     <!-- CSV Dosyaları -->
+            {% if csv_files %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Son CSV Dosyaları</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Dosya Adı</th>
+                                            <th>Oluşturma Tarihi</th>
+                                            <th>E-posta Sayısı</th>
+                                            <th>Boyut</th>
+                                            <th>İşlemler</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for csv_file in csv_files %}
+                                        <tr>
+                                            <td>{{ csv_file.filename }}</td>
+                                            <td>{{ csv_file.created_at|date:"d.m.Y H:i" }}</td>
+                                            <td>{{ csv_file.row_count }}</td>
+                                            <td>{{ csv_file.size_mb }} MB</td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{% url 'view_csv_content' csv_file.filename %}"
+                                                       class="btn btn-info btn-sm">
+                                                        <i class="fas fa-eye"></i> Görüntüle
+                                                    </a>
+                                                    <a href="{% url 'download_csv' csv_file.filename %}"
+                                                       class="btn btn-success btn-sm">
+                                                        <i class="fas fa-download"></i> İndir
+                                                    </a>
+                                                    <form method="post" action="{% url 'process_from_csv' %}" style="display: inline;">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="csv_filename" value="{{ csv_file.filename }}">
+                                                        <button type="submit" class="btn btn-primary btn-sm">
+                                                            <i class="fas fa-cogs"></i> İşle
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="text-center">
+                                <a href="{% url 'csv_manager' %}" class="btn btn-outline-primary">
+                                    Tüm CSV Dosyalarını Görüntüle
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+</div>
+
+<style>
+/* Loading Animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes progress {
+    0% { width: 0%; }
+    50% { width: 70%; }
+    100% { width: 100%; }
+}
+
+/* Modern Card Styles */
+.modern-card {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.modern-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+.gradient-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.8), rgba(255,255,255,0.3));
+    border-radius: 20px 20px 0 0;
+}
+
+.status-card:hover {
+    transform: translateY(-3px) scale(1.02);
+}
+
+/* Modern Button Styles */
+.modern-btn {
+    border-radius: 12px;
+    font-weight: 600;
+    padding: 0.8rem 1.5rem;
+    border: none;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.3s ease;
+}
+
+.modern-btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.modern-btn-outline {
+    border: 2px solid #e2e8f0;
+    background: transparent;
+    color: #667eea;
+    border-radius: 12px;
+    font-weight: 600;
+    padding: 0.7rem 1.3rem;
+    transition: all 0.3s ease;
+}
+
+.modern-btn-outline:hover {
+    border-color: #667eea;
+    background: #667eea;
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* Modern Table Styles */
+.modern-table-container {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.modern-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.modern-table thead tr {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.modern-table th {
+    padding: 1.2rem;
+    text-align: left;
+    font-weight: 700;
+    color: #2d3748;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.table-row {
+    border-bottom: 1px solid #f1f5f9;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.table-row:hover {
+    background: linear-gradient(135deg, #f8fafc, #ffffff);
+    transform: translateX(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.table-row:hover::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 0 4px 4px 0;
+}
+
+.modern-table td {
+    padding: 1.2rem;
+    color: #4a5568;
+}
+
+.company-link {
+    text-decoration: none;
+    color: #667eea;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.company-link:hover {
+    color: #764ba2;
+    transform: translateX(4px);
+}
+
+.position-cell {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.date-cell {
+    color: #718096;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Modern Badge Styles */
+.modern-badge {
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: all 0.5s ease;
+}
+
+.modern-badge:hover::before {
+    left: 100%;
+}
+
+/* Processing Info Styles */
+.processing-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f9fafb, #f3f4f6);
+    border-radius: 12px;
+    border-left: 4px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.info-item:hover {
+    border-left-color: #667eea;
+    transform: translateX(4px);
+}
+
+.info-label {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.info-value {
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.info-value.success {
+    color: #10b981;
+}
+
+.status-success {
+    color: #10b981;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.status-error {
+    color: #ef4444;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.error-message {
+    padding: 1rem;
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+    color: #dc2626;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    border-left: 4px solid #ef4444;
+}
+
+/* Empty State Styles */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #9ca3af;
+}
+
+.empty-state.small {
+    padding: 2rem;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    opacity: 0.3;
+    margin-bottom: 1.5rem;
+    display: block;
+}
+
+.empty-state.small i {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    font-size: 1rem;
+    color: #9ca3af;
+}
+
+/* Action Card Styles */
+.action-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.8rem;
+    border-radius: 16px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    background: white;
+}
+
+.action-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+    transition: all 0.6s ease;
+}
+
+.action-card:hover::before {
+    left: 100%;
+}
+
+.action-card.primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.action-card.secondary {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+}
+
+.action-card.success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.action-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+}
+
+.action-card i {
+    font-size: 2rem;
+    opacity: 0.9;
+}
+
+.action-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+}
+
+.action-desc {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    div[style*="grid-template-columns: 2fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2.2rem !important;
+    }
+
+    .modern-card {
+        border-radius: 16px;
+        margin: 0 0.5rem;
+    }
+
+    div[style*="display: flex; gap: 1rem;"] {
+        flex-direction: column;
+        gap: 0.8rem !important;
+    }
+
+    .modern-table th,
+    .modern-table td {
+        padding: 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .action-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.8rem;
+    }
+}
+
+/* Animation for cards */
+.fade-in {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card:nth-child(even) {
+    animation-delay: 0.1s;
+}
+
+.card:nth-child(odd) {
+    animation-delay: 0.2s;
+}
+</style>
+
+<script>
+function startEmailSync() {
+    // Show loading overlay
+    document.getElementById('loading-overlay').style.display = 'flex';
+
+    // Disable the sync button to prevent multiple clicks
+    const syncBtn = document.getElementById('sync-email-btn');
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Senkronize Ediliyor...';
+
+    // Redirect to sync_emails URL
+    setTimeout(() => {
+        window.location.href = "{% url 'sync_emails' %}";
+    }, 500);
+}
+
+// Hide loading overlay when page loads (in case of back navigation)
+window.addEventListener('load', function() {
+    document.getElementById('loading-overlay').style.display = 'none';
+});
+
+// Add smooth scroll behavior
+document.documentElement.style.scrollBehavior = 'smooth';
+</script>
+{% endblock %}

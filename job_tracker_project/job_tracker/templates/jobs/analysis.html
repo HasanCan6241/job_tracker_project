@@ -1,0 +1,685 @@
+{% extends "jobs/base.html" %}
+{% load static %}
+
+{% block title %}İş Başvuruları Analizi{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Base.html stillerini geçersiz kılmak için daha spesifik seçiciler */
+    .analysis-container,
+    .analysis-container h1,
+    .analysis-container h2,
+    .analysis-container h3,
+    .analysis-container h4,
+    .analysis-container h5,
+    .analysis-container h6 {
+        color: #2c3e50 !important;
+    }
+
+    .analysis-container {
+        padding: 20px 0;
+    }
+
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stats-card h3 {
+        font-size: 2.5rem;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: white !important;
+    }
+
+    .stats-card p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    .chart-container {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+    }
+
+    .chart-title {
+        color: #2c3e50 !important;
+        font-weight: 600;
+        margin-bottom: 20px;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+    }
+
+    .loading-spinner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 200px;
+    }
+
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        color: #667eea;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 0;
+        margin-bottom: 30px;
+        border-radius: 0 0 50px 50px;
+    }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        font-weight: 300;
+        margin: 0;
+        text-align: center;
+        color: white !important;
+    }
+
+    .alert-info {
+        background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
+        border: none;
+        color: white;
+        border-radius: 10px;
+    }
+
+    .alert-info h4 {
+        color: white !important;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 12px 30px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .row.equal-height {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .row.equal-height > [class*='col-'] {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chart-container.flex-fill {
+        flex: 1;
+    }
+
+    /* Detaylı istatistikler için başlık stilleri */
+    #detailed-stats h5 {
+        color: inherit !important;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Base.html'deki body rengini geçersiz kılmak için */
+    body .analysis-container,
+    body .analysis-container .chart-container,
+    body .analysis-container .chart-title {
+        color: #2c3e50 !important;
+    }
+
+    @media (max-width: 768px) {
+        .stats-card h3 {
+            font-size: 2rem;
+        }
+        .page-header h1 {
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1><i class="fas fa-chart-bar me-3"></i>İş Başvuruları Analizi</h1>
+    </div>
+</div>
+
+<div class="container analysis-container">
+    <!-- İstatistik Kartları -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="stats-card text-center">
+                <h3 id="total-apps">{{ total_applications }}</h3>
+                <p><i class="fas fa-paper-plane me-2"></i>Toplam Başvuru</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stats-card text-center">
+                <h3 id="total-companies">{{ companies_count }}</h3>
+                <p><i class="fas fa-building me-2"></i>Farklı Şirket</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stats-card text-center">
+                <h3 id="month-apps">{{ this_month_applications }}</h3>
+                <p><i class="fas fa-calendar me-2"></i>Bu Ay</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stats-card text-center">
+                <h3 id="pending-apps">{{ pending_applications }}</h3>
+                <p><i class="fas fa-hourglass-half me-2"></i>Bekleyen</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detaylı İstatistikler -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <h4 class="chart-title"><i class="fas fa-info-circle me-2"></i>Detaylı İstatistikler</h4>
+                <div id="detailed-stats" class="loading-spinner">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Yükleniyor...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if total_applications > 0 %}
+    <!-- Grafikler -->
+    <div class="row equal-height mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="chart-container flex-fill">
+                <h4 class="chart-title"><i class="fas fa-chart-pie me-2"></i>Başvuru Durumları</h4>
+                <canvas id="statusChart" style="max-height: 400px;"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="chart-container flex-fill">
+                <h4 class="chart-title"><i class="fas fa-chart-line me-2"></i>Aylık Başvuru Trendi</h4>
+                <canvas id="monthlyChart" style="max-height: 400px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row equal-height mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="chart-container flex-fill">
+                <h4 class="chart-title"><i class="fas fa-building me-2"></i>En Çok Başvuru Yapılan Şirketler</h4>
+                <canvas id="companiesChart" style="max-height: 400px;"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="chart-container flex-fill">
+                <h4 class="chart-title"><i class="fas fa-chart-area me-2"></i>Haftalık Aktivite</h4>
+                <canvas id="weeklyChart" style="max-height: 400px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <h4 class="chart-title"><i class="fas fa-trophy me-2"></i>Şirketlere Göre Başarı Oranları</h4>
+                <canvas id="successChart" style="max-height: 400px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Veri Yoksa Gösterilecek Mesaj -->
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info text-center p-4">
+                <i class="fas fa-info-circle fa-2x mb-3"></i>
+                <h4>Henüz Analiz Edilecek Veri Bulunmuyor</h4>
+                <p>Sistem henüz iş başvurusu verisi bulamadı. Gmail hesabınızı kontrol ettirip e-postaları işleme aldıktan sonra analiz sonuçları burada görünecektir.</p>
+                <a href="{% url 'process_from_csv' %}" class="btn btn-primary mt-3">
+                    <i class="fas fa-sync me-2"></i>E-postaları İşle
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js kütüphanesi -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Script çalışıyor!"); // Bu konsolda görünmeli
+    // CSRF token'ı al
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Genel grafik ayarları
+    Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
+    Chart.defaults.font.size = 12;
+    Chart.defaults.plugins.legend.position = 'bottom';
+
+    // Renkler
+    const colors = {
+        primary: '#667eea',
+        secondary: '#764ba2',
+        success: '#28a745',
+        danger: '#dc3545',
+        warning: '#ffc107',
+        info: '#17a2b8',
+        light: '#f8f9fa',
+        dark: '#343a40'
+    };
+
+    {% if total_applications > 0 %}
+
+    // Detaylı istatistikleri yükle
+    loadDetailedStats();
+
+    // Durum dağılımı grafiği
+    loadStatusChart();
+
+    // Aylık trend grafiği
+    loadMonthlyChart();
+
+    // Şirketler grafiği
+    loadCompaniesChart();
+
+    // Haftalık aktivite grafiği
+    loadWeeklyChart();
+
+    // Başarı oranları grafiği
+    loadSuccessChart();
+
+    {% endif %}
+
+    // Detaylı istatistikleri yükle
+    function loadDetailedStats() {
+        fetch('{% url "api_statistics" %}')
+            .then(response => response.json())
+            .then(data => {
+                const statsHtml = `
+                    <div class="row text-center">
+                        <div class="col-md-2 col-6 mb-3">
+                            <div class="border rounded p-3">
+                                <h5 class="text-success">${data.accepted}</h5>
+                                <small class="text-muted">Kabul Edildi</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6 mb-3">
+                            <div class="border rounded p-3">
+                                <h5 class="text-danger">${data.rejected}</h5>
+                                <small class="text-muted">Reddedildi</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6 mb-3">
+                            <div class="border rounded p-3">
+                                <h5 class="text-info">${data.pending}</h5>
+                                <small class="text-muted">Bekleyen</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6 mb-3">
+                            <div class="border rounded p-3">
+                                <h5 class="text-success">${data.acceptance_rate}%</h5>
+                                <small class="text-muted">Kabul Oranı</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6 mb-3">
+                            <div class="border rounded p-3">
+                                <h5 class="text-danger">${data.rejection_rate}%</h5>
+                                <small class="text-muted">Red Oranı</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6 mb-3">
+                            <div class="border rounded p-3">
+                                <h5 class="text-primary">${data.response_rate}%</h5>
+                                <small class="text-muted">Yanıt Oranı</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detailed-stats').innerHTML = statsHtml;
+            })
+            .catch(error => {
+                console.error('Detaylı istatistikler yüklenirken hata:', error);
+                document.getElementById('detailed-stats').innerHTML =
+                    '<div class="alert alert-warning">İstatistikler yüklenirken hata oluştu.</div>';
+            });
+    }
+
+    function loadStatusChart() {
+        fetch('{% url "api_status_distribution" %}')
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('statusChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            data: data.data,
+                            backgroundColor: data.colors,
+                            borderWidth: 0,
+                            hoverBorderWidth: 4,
+                            hoverBorderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label;
+                                        const value = context.raw;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Durum grafiği yüklenirken hata:', error));
+    }
+
+    function loadMonthlyChart() {
+        fetch('{% url "api_monthly_trend" %}')
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('monthlyChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Başvuru Sayısı',
+                            data: data.data,
+                            borderColor: colors.primary,
+                            backgroundColor: colors.primary + '20',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: colors.primary,
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                },
+                                grid: {
+                                    color: '#f0f0f0'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                borderColor: colors.primary,
+                                borderWidth: 1
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Aylık trend grafiği yüklenirken hata:', error));
+    }
+
+    function loadCompaniesChart() {
+        fetch('{% url "api_top_companies" %}')
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('companiesChart').getContext('2d');
+
+                // Gradient oluştur
+                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, colors.primary);
+                gradient.addColorStop(1, colors.secondary);
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels.map(label =>
+                            label.length > 20 ? label.substring(0, 20) + '...' : label
+                        ),
+                        datasets: [{
+                            label: 'Başvuru Sayısı',
+                            data: data.data,
+                            backgroundColor: gradient,
+                            borderColor: colors.primary,
+                            borderWidth: 0,
+                            borderRadius: 8,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                },
+                                grid: {
+                                    color: '#f0f0f0'
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(context) {
+                                        return data.labels[context[0].dataIndex];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Şirketler grafiği yüklenirken hata:', error));
+    }
+
+    function loadWeeklyChart() {
+        fetch('{% url "api_weekly_activity" %}')
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('weeklyChart').getContext('2d');
+
+                // Gradient oluştur
+                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, colors.info + '80');
+                gradient.addColorStop(1, colors.info + '20');
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Başvuru Sayısı',
+                            data: data.data,
+                            backgroundColor: gradient,
+                            borderColor: colors.info,
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                },
+                                grid: {
+                                    color: '#f0f0f0'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(context) {
+                                        return 'Hafta: ' + context[0].label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Haftalık aktivite grafiği yüklenirken hata:', error));
+    }
+
+    function loadSuccessChart() {
+        fetch('{% url "api_success_rate" %}')
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('successChart').getContext('2d');
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels.map(label =>
+                            label.length > 25 ? label.substring(0, 25) + '...' : label
+                        ),
+                        datasets: [{
+                            label: 'Başarı Oranı (%)',
+                            data: data.success_rates,
+                            backgroundColor: data.success_rates.map(rate => {
+                                if (rate >= 70) return colors.success + '80';
+                                if (rate >= 40) return colors.warning + '80';
+                                return colors.danger + '80';
+                            }),
+                            borderColor: data.success_rates.map(rate => {
+                                if (rate >= 70) return colors.success;
+                                if (rate >= 40) return colors.warning;
+                                return colors.danger;
+                            }),
+                            borderWidth: 2,
+                            borderRadius: 8,
+                            borderSkipped: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                },
+                                grid: {
+                                    color: '#f0f0f0'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    maxRotation: 45
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(context) {
+                                        return data.labels[context[0].dataIndex];
+                                    },
+                                    afterLabel: function(context) {
+                                        const index = context.dataIndex;
+                                        return `Toplam başvuru: ${data.totals[index]}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Başarı oranları grafiği yüklenirken hata:', error));
+    }
+});
+</script>
+{% endblock %}

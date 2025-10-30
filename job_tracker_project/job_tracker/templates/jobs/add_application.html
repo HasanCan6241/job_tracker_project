@@ -1,0 +1,403 @@
+{% extends 'jobs/base.html' %}
+
+{% block title %}Yeni Başvuru Ekle - İş Başvuru Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Header Section -->
+    <div class="card">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
+            <a href="{% url 'application_list' %}" class="btn btn-outline" style="padding: 0.5rem;">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 style="font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">
+                    <i class="fas fa-plus-circle"></i> Yeni Başvuru Ekle
+                </h1>
+                <p style="color: #666; font-size: 1.1rem; margin: 0.5rem 0 0 0;">
+                    Manuel olarak iş başvurusu kaydı oluşturun
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Section -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+        
+        <!-- Main Form -->
+        <div class="card">
+            <h2 style="margin-bottom: 2rem; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-edit"></i> Başvuru Bilgileri
+            </h2>
+
+            <form method="post" id="applicationForm">
+                {% csrf_token %}
+                
+                <!-- Company Name -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-building"></i> Şirket Adı *
+                    </label>
+                    <input type="text" 
+                           name="company_name" 
+                           class="form-control" 
+                           placeholder="Örn: Google, Microsoft, Apple"
+                           required
+                           maxlength="200">
+                    <small style="color: #666; font-size: 0.9rem; margin-top: 0.25rem; display: block;">
+                        Başvuru yaptığınız şirketin adını girin
+                    </small>
+                </div>
+
+                <!-- Position -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-user-tie"></i> Pozisyon *
+                    </label>
+                    <input type="text" 
+                           name="position" 
+                           class="form-control" 
+                           placeholder="Örn: Frontend Developer, Data Scientist, Product Manager"
+                           required
+                           maxlength="200">
+                    <small style="color: #666; font-size: 0.9rem; margin-top: 0.25rem; display: block;">
+                        Başvurduğunuz pozisyonun adını girin
+                    </small>
+                </div>
+
+                <!-- Email -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-envelope"></i> İletişim E-postası
+                    </label>
+                    <input type="email" 
+                           name="email_sender" 
+                           class="form-control" 
+                           placeholder="Örn: careers@company.com, hr@example.com"
+                           maxlength="254">
+                    <small style="color: #666; font-size: 0.9rem; margin-top: 0.25rem; display: block;">
+                        Şirketin HR veya kariyer e-posta adresi (isteğe bağlı)
+                    </small>
+                </div>
+
+                <!-- Status -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-flag"></i> Başvuru Durumu
+                    </label>
+                    <select name="status" class="form-control">
+                        {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if value == 'received' %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small style="color: #666; font-size: 0.9rem; margin-top: 0.25rem; display: block;">
+                        Başvurunuzun mevcut durumunu seçin
+                    </small>
+                </div>
+
+                <!-- Notes -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-sticky-note"></i> Notlar
+                    </label>
+                    <textarea name="notes" 
+                              class="form-control" 
+                              rows="6"
+                              placeholder="Başvuru ile ilgili notlarınızı buraya yazabilirsiniz...&#10;&#10;Örneğin:&#10;- Başvuru sürecinde yaşanan deneyimler&#10;- Şirket hakkında araştırma notları&#10;- Mülakat tarihleri ve detayları&#10;- Önemli hatırlatmalar"
+                              style="resize: vertical; min-height: 120px;"></textarea>
+                    <small style="color: #666; font-size: 0.9rem; margin-top: 0.25rem; display: block;">
+                        Başvuru süreciyle ilgili önemli bilgileri ve notları kaydedin
+                    </small>
+                </div>
+
+                <!-- Form Actions -->
+                <div style="display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end;">
+                    <a href="{% url 'application_list' %}" class="btn btn-outline">
+                        <i class="fas fa-times"></i> İptal
+                    </a>
+                    <button type="button" onclick="resetForm()" class="btn btn-secondary">
+                        <i class="fas fa-undo"></i> Temizle
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            
+            <!-- Help Card -->
+            <div class="card">
+                <h3 style="margin-bottom: 1.5rem; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-lightbulb"></i> İpuçları
+                </h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="padding: 1rem; background: #e3f2fd; border-radius: 10px; border-left: 4px solid #2196f3;">
+                        <div style="font-weight: 600; color: #1976d2; margin-bottom: 0.5rem;">
+                            <i class="fas fa-info-circle"></i> Şirket Adı
+                        </div>
+                        <p style="color: #333; margin: 0; font-size: 0.9rem; line-height: 1.4;">
+                            Tam şirket adını yazın. Kısaltmalar yerine resmi ismi tercih edin.
+                        </p>
+                    </div>
+                    
+                    <div style="padding: 1rem; background: #f3e5f5; border-radius: 10px; border-left: 4px solid #9c27b0;">
+                        <div style="font-weight: 600; color: #7b1fa2; margin-bottom: 0.5rem;">
+                            <i class="fas fa-user-tie"></i> Pozisyon
+                        </div>
+                        <p style="color: #333; margin: 0; font-size: 0.9rem; line-height: 1.4;">
+                            İlan edilen pozisyon adını tam olarak girin. Teknik seviyeleri de ekleyin.
+                        </p>
+                    </div>
+                    
+                    <div style="padding: 1rem; background: #e8f5e8; border-radius: 10px; border-left: 4px solid #4caf50;">
+                        <div style="font-weight: 600; color: #2e7d32; margin-bottom: 0.5rem;">
+                            <i class="fas fa-calendar-check"></i> Takip
+                        </div>
+                        <p style="color: #333; margin: 0; font-size: 0.9rem; line-height: 1.4;">
+                            Notlar bölümünde önemli tarihleri ve süreç adımlarını kaydedin.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Guide -->
+            <div class="card">
+                <h3 style="margin-bottom: 1.5rem; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-flag"></i> Durum Rehberi
+                </h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="status-badge status-received" style="min-width: 80px; text-align: center;">Alındı</span>
+                        <span style="color: #666; font-size: 0.9rem;">Başvuru gönderildi</span>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="status-badge status-interview" style="min-width: 80px; text-align: center;">Mülakat</span>
+                        <span style="color: #666; font-size: 0.9rem;">Mülakat aşamasında</span>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="status-badge status-pending" style="min-width: 80px; text-align: center;">Beklemede</span>
+                        <span style="color: #666; font-size: 0.9rem;">Değerlendiriliyor</span>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="status-badge status-accepted" style="min-width: 80px; text-align: center;">Kabul</span>
+                        <span style="color: #666; font-size: 0.9rem;">Teklif alındı</span>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="status-badge status-rejected" style="min-width: 80px; text-align: center;">Red</span>
+                        <span style="color: #666; font-size: 0.9rem;">Başvuru reddedildi</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <h3 style="margin-bottom: 1.5rem; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-bolt"></i> Hızlı İşlemler
+                </h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <a href="{% url 'sync_emails' %}" class="btn btn-primary" style="justify-content: center;">
+                        <i class="fas fa-sync-alt"></i> E-posta Senkronizasyonu
+                    </a>
+                    
+                    <a href="{% url 'application_list' %}" class="btn btn-outline" style="justify-content: center;">
+                        <i class="fas fa-list"></i> Tüm Başvurular
+                    </a>
+                    
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline" style="justify-content: center;">
+                        <i class="fas fa-chart-pie"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Form validation
+    document.getElementById('applicationForm').addEventListener('submit', function(e) {
+        const companyName = document.querySelector('input[name="company_name"]').value.trim();
+        const position = document.querySelector('input[name="position"]').value.trim();
+        
+        if (!companyName || !position) {
+            e.preventDefault();
+            alert('Lütfen şirket adı ve pozisyon alanlarını doldurun.');
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = document.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<div class="spinner"></div> Kaydediliyor...';
+        submitBtn.disabled = true;
+        
+        // Re-enable button after 3 seconds if form submission fails
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 3000);
+    });
+
+    // Reset form function
+    function resetForm() {
+        if (confirm('Formu temizlemek istediğinizden emin misiniz? Girilen tüm bilgiler silinecek.')) {
+            document.getElementById('applicationForm').reset();
+            
+            // Focus on first input
+            document.querySelector('input[name="company_name"]').focus();
+            
+            // Show success message
+            showTempMessage('Form temizlendi', 'success');
+        }
+    }
+
+    // Auto-save functionality (optional)
+    let autoSaveTimeout;
+    const formInputs = document.querySelectorAll('input, select, textarea');
+    
+    formInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                saveFormData();
+            }, 2000); // Save after 2 seconds of inactivity
+        });
+    });
+
+    // Save form data to localStorage
+    function saveFormData() {
+        const formData = {};
+        formInputs.forEach(input => {
+            if (input.name) {
+                formData[input.name] = input.value;
+            }
+        });
+        localStorage.setItem('draftApplication', JSON.stringify(formData));
+        showTempMessage('Taslak kaydedildi', 'info', 2000);
+    }
+
+    // Load form data from localStorage
+    function loadFormData() {
+        const savedData = localStorage.getItem('draftApplication');
+        if (savedData) {
+            const formData = JSON.parse(savedData);
+            Object.keys(formData).forEach(key => {
+                const input = document.querySelector(`[name="${key}"]`);
+                if (input && formData[key]) {
+                    input.value = formData[key];
+                }
+            });
+            showTempMessage('Taslak yüklendi', 'info', 3000);
+        }
+    }
+
+    // Clear saved data when form is submitted successfully
+    document.getElementById('applicationForm').addEventListener('submit', function() {
+        localStorage.removeItem('draftApplication');
+    });
+
+    // Show temporary message
+    function showTempMessage(message, type = 'info', duration = 2000) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `alert alert-${type}`;
+        messageDiv.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
+        messageDiv.style.position = 'fixed';
+        messageDiv.style.top = '20px';
+        messageDiv.style.right = '20px';
+        messageDiv.style.zIndex = '1000';
+        messageDiv.style.minWidth = '200px';
+        
+        document.body.appendChild(messageDiv);
+        
+        setTimeout(() => {
+            messageDiv.style.opacity = '0';
+            messageDiv.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                document.body.removeChild(messageDiv);
+            }, 300);
+        }, duration);
+    }
+
+    // Load saved data when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadFormData();
+        
+        // Focus on first input
+        document.querySelector('input[name="company_name"]').focus();
+    });
+
+    // Character count for textarea
+    const textarea = document.querySelector('textarea[name="notes"]');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            const remaining = 2000 - this.value.length;
+            let counter = document.querySelector('.char-counter');
+            
+            if (!counter) {
+                counter = document.createElement('small');
+                counter.className = 'char-counter';
+                counter.style.color = '#666';
+                counter.style.fontSize = '0.8rem';
+                counter.style.float = 'right';
+                textarea.parentNode.appendChild(counter);
+            }
+            
+            counter.textContent = `${this.value.length}/2000 karakter`;
+            counter.style.color = remaining < 100 ? '#f44336' : '#666';
+        });
+    }
+</script>
+
+<style>
+    /* Form enhancements */
+    .form-control:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+    }
+
+    /* Responsive design */
+    @media (max-width: 1024px) {
+        div[style*="grid-template-columns: 2fr 1fr"] {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        div[style*="display: flex; gap: 1rem; margin-top: 2rem"] {
+            flex-direction: column !important;
+            gap: 0.5rem !important;
+        }
+        
+        h1 {
+            font-size: 2rem !important;
+        }
+    }
+
+    /* Animation for help cards */
+    .card:hover {
+        transform: translateY(-2px);
+    }
+
+    /* Status badges in guide */
+    .status-badge {
+        flex-shrink: 0;
+    }
+
+    /* Textarea styling */
+    textarea.form-control {
+        font-family: inherit;
+        line-height: 1.5;
+    }
+</style>
+{% endblock %}

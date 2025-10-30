@@ -1,0 +1,476 @@
+{% extends 'jobs/base.html' %}
+
+{% block content %}
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f8f9fa;
+    color: #212529;
+  }
+  .hero {
+    padding: 80px 0;
+    background: linear-gradient(135deg, rgba(0,212,255,0.05), rgba(9,9,121,0.05));
+  }
+  .small-muted {
+    color: #6c757d;
+    font-size: 0.9rem;
+  }
+  .btn-accent {
+    background-color: #00d4ff;
+    color: #000;
+    font-weight: 600;
+  }
+  .btn-accent:hover {
+    background-color: #00bde0;
+    color: #000;
+  }
+  .glass-card {
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .card-ghost {
+    background: rgba(0,0,0,0.02);
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+  .feature-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(0,212,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    color: #00d4ff;
+  }
+  footer {
+    background: rgba(0,0,0,0.03);
+    border-top: 1px solid rgba(0,0,0,0.05);
+  }
+  .table-transparent {
+    background-color: transparent;
+  }
+  .table-transparent th {
+    color: #495057;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+  }
+  .table-transparent td {
+    border-bottom: 1px solid #dee2e6;
+  }
+  .badge {
+    font-weight: 500;
+  }
+  .bg-secondary {
+    background-color: #6c757d !important;
+  }
+</style>
+
+<header class="hero">
+  <div class="container">
+    <div class="row align-items-center">
+      <!-- Hero Text -->
+      <div class="col-lg-6">
+        <h1 class="display-5 fw-bold">İş başvuruları artık kaybolmayacak — otomatik, akıllı ve görsel.</h1>
+        <p class="lead small-muted">Gmail hesabınızı bağlayın, Gemini ile mailleri analiz edin ve başvurularınızı "Başvuru Alındı"dan "Kabul"e kadar otomatik olarak takip edin. CSV'ler, detaylı analizler ve anlık bildirimlerle süreci hızlandırın.</p>
+        <div class="d-flex gap-2 mt-4">
+          <a class="btn btn-lg btn-accent shadow-sm" href="{% url 'dashboard' %}">Hemen Başla</a>
+          <a class="btn btn-lg btn-outline-secondary" href="#how">Nasıl Çalışır?</a>
+        </div>
+        <div class="d-flex gap-3 align-items-center mt-4 small-muted flex-wrap">
+          <div><i class="fas fa-check-circle me-2 text-success"></i> Gemini entegrasyonu</div>
+          <div><i class="fas fa-check-circle me-2 text-success"></i> Kullanıcı tabanlı ayarlar</div>
+          <div><i class="fas fa-check-circle me-2 text-success"></i> CSV & görselleştirme</div>
+        </div>
+      </div>
+      <!-- Dashboard Mockup -->
+      <div class="col-lg-6 mt-4 mt-lg-0">
+        <div class="glass-card p-4 rounded-4 shadow-sm">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="mb-1">Bugünkü Tarama</h6>
+              <h3 class="mb-0">42 e-posta</h3>
+              <div class="small-muted">İş başvurusu adayı: 12</div>
+            </div>
+            <div class="text-end">
+              <div class="small-muted">Durum</div>
+              <span class="badge bg-success">Çalışıyor</span>
+            </div>
+          </div>
+          <hr class="my-3">
+          <div class="row g-2">
+            <div class="col-6"><div class="card card-ghost p-3 rounded-3"><div class="small-muted">Başvuru Alındı</div><h5>7</h5></div></div>
+            <div class="col-6"><div class="card card-ghost p-3 rounded-3"><div class="small-muted">Mülakat</div><h5>3</h5></div></div>
+            <div class="col-6"><div class="card card-ghost p-3 rounded-3"><div class="small-muted">Kabul</div><h5>1</h5></div></div>
+            <div class="col-6"><div class="card card-ghost p-3 rounded-3"><div class="small-muted">Reddedildi</div><h5>2</h5></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features" class="py-5">
+  <div class="container">
+    <div class="row align-items-center">
+      <!-- Özellikler -->
+      <div class="col-lg-6">
+        <h3>Öne Çıkan Özellikler</h3>
+        <p class="small-muted">Sistemin güçlü yönleri — basit, şeffaf ve özelleştirilebilir.</p>
+        <div class="mt-4">
+          <div class="d-flex mb-3 gap-3 align-items-start">
+            <div class="feature-icon"><i class="fas fa-envelope fa-lg"></i></div>
+            <div><h6 class="mb-0">Gmail Entegrasyonu</h6><div class="small-muted">Belirlenen aralıkta Gmail API ile mailler otomatik çekilir ve iş başvurusu olanlar analiz edilir.</div></div>
+          </div>
+          <div class="d-flex mb-3 gap-3 align-items-start">
+            <div class="feature-icon"><i class="fas fa-robot fa-lg"></i></div>
+            <div><h6 class="mb-0">Gemini ile Akıllı Analiz</h6><div class="small-muted">Konu, gönderen ve içerik bazlı sınıflandırma; spam filtresi ve önceliklendirme.</div></div>
+          </div>
+          <div class="d-flex mb-3 gap-3 align-items-start">
+            <div class="feature-icon"><i class="fas fa-chart-simple fa-lg"></i></div>
+            <div><h6 class="mb-0">Zengin Görselleştirme</h6><div class="small-muted">Durum dağılımı, aylık trendler, şirket başarı oranları ve 8 haftalık aktivite grafikleri.</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- Başvuru Tablosu -->
+      <div class="col-lg-6">
+        <div class="glass-card p-4 rounded-4">
+          <h6>Örnek Başvurular</h6>
+          <div class="table-responsive mt-3">
+            <table class="table table-transparent table-sm">
+              <thead>
+                <tr><th>Konu</th><th>Gönderen</th><th>Durum</th><th>Tarih</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Yazılım Mühendisi pozisyonu için başvuru</td>
+                  <td>Google HR</td>
+                  <td><span class="badge bg-secondary">Mülakat</span></td>
+                  <td class="small-muted">15 Haz 2023</td>
+                </tr>
+                <tr>
+                  <td>Ürün Yöneticisi pozisyonu hakkında</td>
+                  <td>Amazon Recruiting</td>
+                  <td><span class="badge bg-secondary">Başvuru Alındı</span></td>
+                  <td class="small-muted">12 Haz 2023</td>
+                </tr>
+                <tr>
+                  <td>Teknik Görüşme Sonuçları</td>
+                  <td>Microsoft</td>
+                  <td><span class="badge bg-secondary">Reddedildi</span></td>
+                  <td class="small-muted">10 Haz 2023</td>
+                </tr>
+                <tr>
+                  <td>İş teklifi ve detayları</td>
+                  <td>Startup XYZ</td>
+                  <td><span class="badge bg-secondary">Kabul</span></td>
+                  <td class="small-muted">05 Haz 2023</td>
+                </tr>
+                <tr>
+                  <td>Frontend Developer pozisyonu takip</td>
+                  <td>ABC Tech</td>
+                  <td><span class="badge bg-secondary">Geri Dönüş Bekleniyor</span></td>
+                  <td class="small-muted">01 Haz 2023</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <a href="#" class="btn btn-sm btn-outline-secondary">Tümünü Görüntüle</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-sm btn-accent">CSV İndir</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="analytics" class="py-5 bg-light">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h3>Başvuru Analizleri</h3>
+        <p class="small-muted mb-0">Hızlıca önemli metrikleri görselleştirin.</p>
+      </div>
+      <div>
+        <button class="btn btn-sm btn-outline-secondary me-2" onclick="window.location.href='{% url 'dashboard' %}'">Filtrele</button>
+       <button onclick="window.location.href='{% url 'dashboard' %}'" class="btn btn-sm btn-accent">
+  Rapor Oluştur
+</button>
+      </div>
+    </div>
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="glass-card p-3 rounded-4">
+          <h6>Durum Dağılımı</h6>
+          <div class="chart-container" style="position: relative; height:240px; width:100%">
+            <canvas id="statusChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <div class="glass-card p-3 rounded-4">
+          <h6>Aylık Başvuru Trendi</h6>
+          <div class="chart-container" style="position: relative; height:240px; width:100%">
+            <canvas id="monthlyChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="glass-card p-3 rounded-4">
+          <h6>En Çok Başvuru Yapılan Şirketler</h6>
+          <div class="chart-container" style="position: relative; height:180px; width:100%">
+            <canvas id="topCompanies"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="glass-card p-3 rounded-4">
+          <h6>8 Haftalık Aktivite</h6>
+          <div class="chart-container" style="position: relative; height:180px; width:100%">
+            <canvas id="weeklyActivity"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how" class="py-5">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-6">
+        <h3>Nasıl Çalışır?</h3>
+        <ol class="small-muted">
+          <li>Gmail API ile hesabınızı bağlayın ve tarama ayarlarını yapın.</li>
+          <li>Gemini modeline gönderilecek e-posta sayısını ve tarih aralığını belirleyin.</li>
+          <li>Model, konu/kimlik/mesaj bazlı sınıflandırma yapar ve veritabanına kaydeder.</li>
+          <li>Başvurular sayfasından detayları görüntüleyin, CSV indirin ve grafiklerle analiz edin.</li>
+        </ol>
+      </div>
+      <div class="col-lg-6">
+        <div class="glass-card p-4 rounded-4">
+          <h6>Ayarlar Örneği</h6>
+          <form class="mt-3">
+            <div class="mb-2">
+              <label class="form-label small-muted">Gemini API Anahtarı</label>
+              <input class="form-control" placeholder="***************" disabled>
+            </div>
+            <div class="row">
+              <div class="col-6 mb-2">
+                <label class="form-label small-muted">Kaç günlük mail</label>
+                <input class="form-control" value="30" disabled>
+              </div>
+              <div class="col-6 mb-2">
+                <label class="form-label small-muted">Analiz edilecek e-posta sayısı</label>
+                <input class="form-control" value="200" disabled>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-3">
+              <button class="btn btn-sm btn-accent" disabled>Kaydet</button>
+              <button class="btn btn-sm btn-outline-secondary" disabled>Varsayılanları Sıfırla</button>
+            </div>
+
+            <div class="small-muted mt-3">* Bu arayüz örneğidir. Gerçek ayarlar uygulama içinde değiştirilebilir.</div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing" class="py-5 bg-light">
+  <div class="container text-center">
+    <h3>Sık Kullanılan Ayarlar</h3>
+    <p class="small-muted">Kullanıcıların sık değiştirdiği parametreleri hızlı erişimle sunun.</p>
+
+    <div class="row justify-content-center mt-4">
+      <div class="col-md-4">
+        <div class="glass-card p-4 rounded-4">
+          <h5>Tarama Aralığı</h5>
+          <p class="small-muted">E-posta kaç günlük aralıklarla taransın.</p>
+          <div class="d-flex gap-2 justify-content-center">
+            <button class="btn btn-sm btn-outline-secondary">7 gün</button>
+            <button class="btn btn-sm btn-accent">30 gün</button>
+            <button class="btn btn-sm btn-outline-secondary">90 gün</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="glass-card p-4 rounded-4">
+          <h5>Analiz Limit</h5>
+          <p class="small-muted">Tek taramada maksimum kaç e-posta analiz edilsin.</p>
+          <div class="d-flex gap-2 justify-content-center">
+            <button class="btn btn-sm btn-outline-secondary">50</button>
+            <button class="btn btn-sm btn-accent">200</button>
+            <button class="btn btn-sm btn-outline-secondary">500</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="py-5 mt-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-4 mb-4 mb-lg-0">
+        <h5>İş Başvuru Takip</h5>
+        <p class="small-muted">Gmail entegrasyonu ve AI destekli analizle iş başvurularınızı kolayca yönetin.</p>
+        <div class="d-flex gap-3 mt-3">
+          <a href="#" class="text-dark"><i class="fab fa-twitter"></i></a>
+          <a href="#" class="text-dark"><i class="fab fa-github"></i></a>
+          <a href="#" class="text-dark"><i class="fab fa-linkedin"></i></a>
+        </div>
+      </div>
+      <div class="col-lg-2 col-md-6 mb-4 mb-md-0">
+        <h6>Bağlantılar</h6>
+        <ul class="list-unstyled small-muted">
+          <li class="mb-2"><a href="#" class="text-decoration-none">Anasayfa</a></li>
+          <li class="mb-2"><a href="#features" class="text-decoration-none">Özellikler</a></li>
+          <li class="mb-2"><a href="#analytics" class="text-decoration-none">Analizler</a></li>
+          <li class="mb-2"><a href="#how" class="text-decoration-none">Nasıl Çalışır?</a></li>
+        </ul>
+      </div>
+      <div class="col-lg-2 col-md-6 mb-4 mb-md-0">
+        <h6>Kaynaklar</h6>
+        <ul class="list-unstyled small-muted">
+          <li class="mb-2"><a href="#" class="text-decoration-none">API Dokümantasyon</a></li>
+          <li class="mb-2"><a href="#" class="text-decoration-none">Yardım Merkezi</a></li>
+          <li class="mb-2"><a href="#" class="text-decoration-none">SSS</a></li>
+        </ul>
+      </div>
+      <div class="col-lg-4">
+        <h6>Bülten Aboneliği</h6>
+        <p class="small-muted">Yeni özellikler ve güncellemeler için kaydolun.</p>
+        <div class="input-group mb-3">
+          <input type="email" class="form-control" placeholder="E-posta" aria-label="E-posta">
+          <button class="btn btn-accent" type="button">Abone Ol</button>
+        </div>
+      </div>
+    </div>
+    <hr class="my-4">
+    <div class="row align-items-center">
+      <div class="col-md-6 text-center text-md-start small-muted">
+        © 2023 İş Başvuru Takip. Tüm hakları saklıdır.
+      </div>
+      <div class="col-md-6 text-center text-md-end small-muted">
+        <a href="#" class="text-decoration-none me-3">Gizlilik Politikası</a>
+        <a href="#" class="text-decoration-none">Kullanım Şartları</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Chart genel ayarları
+  Chart.defaults.color = '#495057';
+  Chart.defaults.borderColor = '#dee2e6';
+
+  // Durum Dağılımı - Pie Chart
+  const statusCtx = document.getElementById('statusChart').getContext('2d');
+  new Chart(statusCtx, {
+    type: 'pie',
+    data: {
+      labels: ['Başvuru Alındı', 'İnceleniyor', 'Mülakat', 'Kabul', 'Reddedildi', 'Geri Dönüş Bekleniyor'],
+      datasets: [{
+        data: [12, 8, 5, 2, 3, 4],
+        backgroundColor: [
+          '#00d4ff',
+          '#36a2eb',
+          '#ffcd56',
+          '#4caf50',
+          '#f44336',
+          '#9c27b0'
+        ],
+        borderWidth: 0
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+
+  // Aylık Başvuru Trendi - Line Chart
+  const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+  new Chart(monthlyCtx, {
+    type: 'line',
+    data: {
+      labels: ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran'],
+      datasets: [{
+        label: 'Başvuru Sayısı',
+        data: [5, 9, 7, 12, 8, 14],
+        fill: true,
+        borderColor: '#00d4ff',
+        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+        tension: 0.3,
+        pointRadius: 5,
+        pointBackgroundColor: '#00d4ff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  // En Çok Başvuru Yapılan Şirketler - Bar Chart
+  const companiesCtx = document.getElementById('topCompanies').getContext('2d');
+  new Chart(companiesCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Google', 'Microsoft', 'Amazon', 'Meta', 'Tesla'],
+      datasets: [{
+        label: 'Başvuru Sayısı',
+        data: [12, 9, 7, 6, 5],
+        backgroundColor: '#36a2eb',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  // 8 Haftalık Aktivite - Bar Chart
+  const weeklyCtx = document.getElementById('weeklyActivity').getContext('2d');
+  new Chart(weeklyCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Hafta 1', 'Hafta 2', 'Hafta 3', 'Hafta 4', 'Hafta 5', 'Hafta 6', 'Hafta 7', 'Hafta 8'],
+      datasets: [{
+        label: 'Başvuru Sayısı',
+        data: [2, 4, 3, 6, 5, 4, 7, 3],
+        backgroundColor: '#ffcd56',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,318 @@
+{% extends 'jobs/base.html' %}
+
+{% block title %}Başvuru Listesi - İş Başvuru Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Header Section -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <div>
+                <h1 style="font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem;">
+                    <i class="fas fa-list"></i> İş Başvuruları
+                </h1>
+                <p style="color: #666; font-size: 1.1rem;">
+                    Toplam {{ total_count }} başvuru
+                    {% if filtered_count != total_count %}
+                        ({{ filtered_count }} filtrelenmiş)
+                    {% endif %}
+                </p>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <a href="{% url 'sync_emails' %}" class="btn btn-primary">
+                    <i class="fas fa-sync-alt"></i> Senkronize Et
+                </a>
+                <a href="{% url 'manual_add_application' %}" class="btn btn-secondary">
+                    <i class="fas fa-plus"></i> Yeni Ekle
+                </a>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <form method="get" style="display: grid; grid-template-columns: 1fr 200px auto; gap: 1rem; align-items: end;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">
+                    <i class="fas fa-search"></i> Arama
+                </label>
+                <input type="text" name="search" value="{{ search }}"
+                       placeholder="Şirket, pozisyon veya e-posta ara..."
+                       class="form-control">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">
+                    <i class="fas fa-filter"></i> Durum
+                </label>
+                <select name="status" class="form-control">
+                    <option value="">Tüm Durumlar</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Filtrele
+                </button>
+                {% if search or status_filter %}
+                    <a href="{% url 'application_list' %}" class="btn btn-outline">
+                        <i class="fas fa-times"></i> Temizle
+                    </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Applications Grid/List -->
+    {% if applications %}
+        <div style="display: grid; gap: 1.5rem;">
+            {% for application in applications %}
+                <div class="card" style="transition: all 0.3s ease; cursor: pointer;"
+                     onclick="window.location.href='{% url 'application_detail' application.pk %}'">
+                    <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 2rem; align-items: center;">
+
+                        <!-- Main Info -->
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;">
+                                <h3 style="font-size: 1.3rem; font-weight: 600; color: #333; margin: 0;">
+                                    <i class="fas fa-building" style="color: #667eea; margin-right: 0.5rem;"></i>
+                                    {{ application.company_name }}
+                                </h3>
+                                <span class="status-badge status-{{ application.status }}">
+                                    {{ application.get_status_display }}
+                                </span>
+                            </div>
+
+                            <p style="font-size: 1.1rem; color: #666; margin: 0 0 0.5rem 0;">
+                                <i class="fas fa-user-tie" style="color: #764ba2; margin-right: 0.5rem;"></i>
+                                {{ application.position }}
+                            </p>
+
+                            <div style="display: flex; gap: 2rem; font-size: 0.9rem; color: #888;">
+                                <span>
+                                    <i class="fas fa-envelope"></i>
+                                    {{ application.email_sender }}
+                                </span>
+                                <span>
+                                    <i class="fas fa-calendar"></i>
+                                    {{ application.application_date|date:"d M Y" }}
+                                </span>
+                                <span>
+                                    <i class="fas fa-clock"></i>
+                                    {{ application.created_at|date:"d M Y H:i" }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Email Preview -->
+                        <div style="max-width: 300px;">
+                            <p style="font-size: 0.9rem; color: #666; margin: 0; font-weight: 600;">
+                                {{ application.email_subject|truncatechars:40 }}
+                            </p>
+                            {% if application.email_content %}
+                                <p style="font-size: 0.8rem; color: #888; margin: 0.25rem 0 0 0; line-height: 1.4;">
+                                    {{ application.email_content|truncatechars:100 }}
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Actions -->
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <a href="{% url 'application_detail' application.pk %}"
+                               class="btn btn-primary" style="font-size: 0.8rem; padding: 0.5rem 1rem;"
+                               onclick="event.stopPropagation();">
+                                <i class="fas fa-eye"></i> Detay
+                            </a>
+
+                            <!-- Quick Status Update -->
+                            <div style="position: relative;">
+                                <button onclick="toggleStatusMenu({{ application.pk }}); event.stopPropagation();"
+                                        class="btn btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem; width: 100%;">
+                                    <i class="fas fa-edit"></i> Durum
+                                </button>
+
+                                <div id="status-menu-{{ application.pk }}"
+                                     style="display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 10; min-width: 150px; margin-top: 0.5rem;">
+                                    {% for value, label in status_choices %}
+                                        {% if value != application.status %}
+                                            <form method="post" action="{% url 'update_application_status' application.pk %}" style="margin: 0;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="{{ value }}">
+                                                <button type="submit"
+                                                        style="width: 100%; text-align: left; border: none; background: none; padding: 0.75rem 1rem; cursor: pointer; transition: background-color 0.2s;"
+                                                        onmouseover="this.style.backgroundColor='#f8f9fa'"
+                                                        onmouseout="this.style.backgroundColor='transparent'">
+                                                    <span class="status-badge status-{{ value }}" style="font-size: 0.7rem;">
+                                                        {{ label }}
+                                                    </span>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if applications.has_other_pages %}
+            <div class="card" style="text-align: center;">
+                <div style="display: flex; justify-content: center; align-items: center; gap: 1rem;">
+                    {% if applications.has_previous %}
+                        <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                           class="btn btn-outline">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                        <a href="?page={{ applications.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                           class="btn btn-outline">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    {% endif %}
+
+                    <span style="padding: 0.75rem 1.5rem; background: #f8f9fa; border-radius: 50px; font-weight: 600;">
+                        {{ applications.number }} / {{ applications.paginator.num_pages }}
+                    </span>
+
+                    {% if applications.has_next %}
+                        <a href="?page={{ applications.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                           class="btn btn-outline">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                        <a href="?page={{ applications.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                           class="btn btn-outline">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    {% endif %}
+                </div>
+
+                <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+                    {{ applications.start_index }} - {{ applications.end_index }} arası,
+                    toplam {{ applications.paginator.count }} başvuru
+                </p>
+            </div>
+        {% endif %}
+
+    {% else %}
+        <!-- Empty State -->
+        <div class="card" style="text-align: center; padding: 4rem 2rem;">
+            <i class="fas fa-search" style="font-size: 4rem; color: #ddd; margin-bottom: 2rem;"></i>
+
+            {% if search or status_filter %}
+                <h3 style="color: #666; margin-bottom: 1rem;">Arama kriterlerinize uygun başvuru bulunamadı</h3>
+                <p style="color: #888; margin-bottom: 2rem;">
+                    Farklı arama terimleri deneyin veya filtreleri temizleyin
+                </p>
+                <a href="{% url 'application_list' %}" class="btn btn-primary">
+                    <i class="fas fa-times"></i> Filtreleri Temizle
+                </a>
+            {% else %}
+                <h3 style="color: #666; margin-bottom: 1rem;">Henüz hiç başvuru bulunmuyor</h3>
+                <p style="color: #888; margin-bottom: 2rem;">
+                    E-posta senkronizasyonu yaparak başlayın veya manuel olarak başvuru ekleyin
+                </p>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <a href="{% url 'sync_emails' %}" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> E-posta Senkronizasyonu
+                    </a>
+                    <a href="{% url 'manual_add_application' %}" class="btn btn-secondary">
+                        <i class="fas fa-plus"></i> Manuel Ekle
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    // Status menu toggle functionality
+    function toggleStatusMenu(applicationId) {
+        const menu = document.getElementById('status-menu-' + applicationId);
+        const allMenus = document.querySelectorAll('[id^="status-menu-"]');
+
+        // Close all other menus
+        allMenus.forEach(m => {
+            if (m.id !== 'status-menu-' + applicationId) {
+                m.style.display = 'none';
+            }
+        });
+
+        // Toggle current menu
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Close menus when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('[onclick*="toggleStatusMenu"]')) {
+            const allMenus = document.querySelectorAll('[id^="status-menu-"]');
+            allMenus.forEach(menu => {
+                menu.style.display = 'none';
+            });
+        }
+    });
+
+    // Card hover effects
+    document.querySelectorAll('.card[onclick]').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px)';
+            this.style.boxShadow = '0 25px 50px rgba(0, 0, 0, 0.15)';
+        });
+
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.1)';
+        });
+    });
+</script>
+
+<style>
+    /* Responsive adjustments */
+    @media (max-width: 1024px) {
+        div[style*="grid-template-columns: 1fr auto auto"] {
+            grid-template-columns: 1fr !important;
+            gap: 1rem !important;
+        }
+
+        div[style*="max-width: 300px"] {
+            max-width: none !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        form[style*="grid-template-columns: 1fr 200px auto"] {
+            grid-template-columns: 1fr !important;
+        }
+
+        div[style*="display: flex; gap: 1rem;"] {
+            flex-direction: column;
+            gap: 0.5rem !important;
+        }
+
+        div[style*="display: flex; gap: 2rem;"] {
+            flex-direction: column;
+            gap: 0.5rem !important;
+        }
+    }
+
+    /* Animation for status menu */
+    [id^="status-menu-"] {
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,787 @@
+{% extends 'jobs/base.html' %}
+{% load static %}
+
+{% block title %}CSV Görüntüleyici - {{ filename }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 fw-bold text-primary mb-1">CSV Görüntüleyici</h1>
+            <p class="text-muted mb-0">Dosya içeriğini görüntüle ve yönet</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'csv_manager' %}" class="btn btn-outline-secondary btn-modern">
+                <i class="fas fa-arrow-left me-2"></i>CSV Yöneticisi
+            </a>
+            <a href="{% url 'download_csv' filename %}" class="btn btn-success btn-modern">
+                <i class="fas fa-download me-2"></i>İndir
+            </a>
+        </div>
+    </div>
+
+    <!-- File Info Card -->
+    <div class="card modern-card mb-4">
+        <div class="card-header modern-card-header">
+            <div class="d-flex align-items-center">
+                <div class="icon-circle me-3">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <h5 class="mb-0 fw-semibold">Dosya Bilgileri</h5>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-lg-3 col-md-6">
+                    <div class="info-item">
+                        <div class="info-label">Dosya Adı</div>
+                        <div class="info-value">
+                            <code class="modern-code">{{ csv_info.filename }}</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="info-item">
+                        <div class="info-label">Oluşturma Tarihi</div>
+                        <div class="info-value">{{ csv_info.created_at|date:"d.m.Y H:i:s" }}</div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="info-item">
+                        <div class="info-label">Toplam Satır</div>
+                        <div class="info-value">
+                            <span class="modern-badge modern-badge-primary">{{ csv_info.row_count }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="info-item">
+                        <div class="info-label">Dosya Boyutu</div>
+                        <div class="info-value">{{ csv_info.size_mb }} MB</div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="info-label mb-2">Sütunlar</div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for column in csv_info.columns %}
+                        <span class="modern-badge modern-badge-light">{{ column }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Card -->
+    <div class="card modern-card mb-4">
+        <div class="card-header modern-card-header">
+            <div class="d-flex align-items-center">
+                <div class="icon-circle me-3">
+                    <i class="fas fa-cogs"></i>
+                </div>
+                <h5 class="mb-0 fw-semibold">Hızlı Eylemler</h5>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-3">
+                <form method="post" action="{% url 'process_from_csv' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="csv_filename" value="{{ filename }}">
+                    <button type="submit" class="btn btn-primary btn-modern"
+                            onclick="return confirm('Bu CSV dosyasını iş başvuruları için işlemek istediğinizden emin misiniz?')">
+                        <i class="fas fa-cogs me-2"></i>İş Başvuruları İçin İşle
+                    </button>
+                </form>
+                <a href="{% url 'download_csv' filename %}" class="btn btn-success btn-modern">
+                    <i class="fas fa-download me-2"></i>Dosyayı İndir
+                </a>
+                <form method="post" action="{% url 'delete_csv' filename %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-modern"
+                            onclick="return confirm('Bu dosyayı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')">
+                        <i class="fas fa-trash me-2"></i>Dosyayı Sil
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row Limit Warning -->
+    {% if showing_rows < csv_info.row_count %}
+    <div class="modern-alert modern-alert-info mb-4">
+        <div class="d-flex align-items-start">
+            <i class="fas fa-info-circle me-3 mt-1"></i>
+            <div>
+                <strong>Not:</strong> Performans için sadece ilk {{ showing_rows }} satır gösteriliyor.
+                Tüm verileri görmek için dosyayı indirip Excel'de açabilirsiniz.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- CSV Content -->
+    <div class="card modern-card">
+        <div class="card-header modern-card-header">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="icon-circle me-3">
+                        <i class="fas fa-table"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-semibold">CSV İçeriği</h5>
+                        <small class="text-muted">{{ showing_rows }}/{{ csv_info.row_count }} satır</small>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" onclick="toggleFullscreen()">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="clearFilters()">Filtreleri Temizle</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="exportVisible()">Görünür Satırları Dışa Aktar</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="modern-table-container" id="tableContainer">
+                <div class="table-wrapper">
+                    {{ table_html|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tips Card -->
+    <div class="card modern-card mt-4">
+        <div class="card-header modern-card-header">
+            <div class="d-flex align-items-center">
+                <div class="icon-circle me-3">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <h6 class="mb-0 fw-semibold">İpuçları ve Klavye Kısayolları</h6>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <h6 class="text-primary mb-3">Sütun Açıklamaları</h6>
+                    <div class="tips-list">
+                        <div class="tip-item">
+                            <strong>id:</strong> Gmail mesaj ID'si
+                        </div>
+                        <div class="tip-item">
+                            <strong>subject:</strong> E-posta konusu
+                        </div>
+                        <div class="tip-item">
+                            <strong>sender:</strong> Gönderen bilgisi (tam)
+                        </div>
+                        <div class="tip-item">
+                            <strong>sender_email:</strong> Sadece e-posta adresi
+                        </div>
+                        <div class="tip-item">
+                            <strong>date:</strong> E-posta tarihi
+                        </div>
+                        <div class="tip-item">
+                            <strong>is_read:</strong> Okunmuş mu?
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-primary mb-3">Kullanım Önerileri</h6>
+                    <div class="tips-list">
+                        <div class="tip-item">
+                            <strong>Sıralama:</strong> Sütun başlığına tıklayarak sıralayın
+                        </div>
+                        <div class="tip-item">
+                            <strong>Arama:</strong> <kbd>Ctrl+F</kbd> ile hızlı arama
+                        </div>
+                        <div class="tip-item">
+                            <strong>Tam Ekran:</strong> <kbd>F11</kbd> veya genişletme butonu
+                        </div>
+                        <div class="tip-item">
+                            <strong>Hücre Detayı:</strong> Hücrenin üzerine gelip bekleyin
+                        </div>
+                        <div class="tip-item">
+                            <strong>Satır Seçimi:</strong> Satıra tıklayarak seçin
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+:root {
+    --primary-color: #3b82f6;
+    --secondary-color: #6366f1;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --info-color: #06b6d4;
+    --light-color: #f8fafc;
+    --dark-color: #1e293b;
+    --border-color: #e2e8f0;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+}
+
+/* Modern Card Styles */
+.modern-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.modern-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.modern-card-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1.5rem;
+    border-radius: 0;
+}
+
+.icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.1rem;
+}
+
+/* Modern Button Styles */
+.btn-modern {
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn-modern:hover::before {
+    left: 100%;
+}
+
+.btn-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Info Items */
+.info-item {
+    margin-bottom: 1rem;
+}
+
+.info-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+.modern-code {
+    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+    color: var(--secondary-color);
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.875rem;
+    border: 1px solid var(--border-color);
+}
+
+/* Modern Badges */
+.modern-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.modern-badge-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.modern-badge-light {
+    background: var(--light-color);
+    color: var(--dark-color);
+    border-color: var(--border-color);
+}
+
+.modern-badge:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
+}
+
+/* Modern Alert */
+.modern-alert {
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-alert::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: currentColor;
+}
+
+.modern-alert-info {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border-color: var(--info-color);
+    color: #0c4a6e;
+}
+
+/* Modern Table Container */
+.modern-table-container {
+    position: relative;
+    max-height: 70vh;
+    overflow: auto;
+    border-radius: var(--radius-md);
+    background: white;
+}
+
+.table-wrapper {
+    position: relative;
+}
+
+/* Enhanced Table Styles */
+#csvTable {
+    margin: 0;
+    font-size: 0.9rem;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    background: white;
+}
+
+#csvTable th {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 1rem 0.75rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    border-bottom: 2px solid var(--border-color);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+    text-align: left;
+}
+
+#csvTable th:hover {
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    color: var(--primary-color);
+}
+
+#csvTable th:first-child {
+    border-left: none;
+    border-top-left-radius: var(--radius-md);
+}
+
+#csvTable th:last-child {
+    border-right: none;
+    border-top-right-radius: var(--radius-md);
+}
+
+#csvTable td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+#csvTable tbody tr {
+    transition: all 0.3s ease;
+}
+
+#csvTable tbody tr:hover {
+    background: linear-gradient(135deg, #fefeff 0%, #f8fafc 100%);
+    box-shadow: inset 3px 0 0 var(--primary-color);
+}
+
+#csvTable tbody tr:hover td {
+    color: var(--dark-color);
+}
+
+#csvTable tbody tr.selected {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    box-shadow: inset 3px 0 0 var(--primary-color);
+}
+
+/* Tooltip for long content */
+#csvTable td:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--dark-color);
+    color: white;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+/* Sort indicators */
+.sort-asc::after {
+    content: ' ↑';
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-left: 0.5rem;
+}
+
+.sort-desc::after {
+    content: ' ↓';
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-left: 0.5rem;
+}
+
+/* Tips styling */
+.tips-list {
+    space-y: 0.75rem;
+}
+
+.tip-item {
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #fefeff 0%, #f8fafc 100%);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.tip-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+    transform: translateX(4px);
+}
+
+/* Keyboard shortcuts */
+kbd {
+    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+    color: var(--dark-color);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-family: inherit;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Fullscreen mode */
+.fullscreen-mode {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    background: white;
+    padding: 1rem;
+}
+
+.fullscreen-mode .modern-table-container {
+    max-height: calc(100vh - 2rem);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    #csvTable {
+        font-size: 0.8rem;
+    }
+
+    #csvTable td {
+        max-width: 120px;
+        padding: 0.5rem 0.375rem;
+    }
+
+    .btn-modern {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .d-flex.gap-2 {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .modern-card-header {
+        padding: 1rem;
+    }
+
+    .icon-circle {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+
+    .info-item {
+        margin-bottom: 0.75rem;
+    }
+}
+
+/* Scrollbar styling */
+.modern-table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.modern-table-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.modern-table-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.modern-table-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+}
+
+/* Loading animation */
+@keyframes shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: calc(200px + 100%) 0; }
+}
+
+.loading-shimmer {
+    animation: shimmer 2s infinite;
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
+    background-size: 400px 100%;
+}
+</style>
+
+<script>
+// Enhanced table functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('csvTable');
+    if (table) {
+        initializeTable(table);
+    }
+});
+
+function initializeTable(table) {
+    // Add sorting functionality
+    const headers = table.querySelectorAll('th');
+    headers.forEach((header, index) => {
+        header.addEventListener('click', function() {
+            sortTable(table, index);
+        });
+    });
+
+    // Add row selection
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        row.addEventListener('click', function() {
+            toggleRowSelection(this);
+        });
+    });
+
+    // Add tooltips for long content
+    const cells = table.querySelectorAll('td');
+    cells.forEach(cell => {
+        if (cell.scrollWidth > cell.clientWidth) {
+            cell.setAttribute('title', cell.textContent.trim());
+        }
+    });
+}
+
+function sortTable(table, column) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    // Determine sort direction
+    const currentHeader = table.querySelectorAll('th')[column];
+    const isAsc = !currentHeader.classList.contains('sort-asc');
+
+    // Clear all sort classes
+    table.querySelectorAll('th').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+
+    // Add sort class to current header
+    currentHeader.classList.add(isAsc ? 'sort-asc' : 'sort-desc');
+
+    // Sort rows
+    rows.sort((a, b) => {
+        const aVal = a.cells[column].textContent.trim();
+        const bVal = b.cells[column].textContent.trim();
+
+        // Try numeric comparison first
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return isAsc ? aNum - bNum : bNum - aNum;
+        }
+
+        // Fallback to string comparison
+        return isAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function toggleRowSelection(row) {
+    row.classList.toggle('selected');
+}
+
+function toggleFullscreen() {
+    const container = document.getElementById('tableContainer');
+    const card = container.closest('.modern-card');
+
+    if (card.classList.contains('fullscreen-mode')) {
+        card.classList.remove('fullscreen-mode');
+        document.body.style.overflow = '';
+    } else {
+        card.classList.add('fullscreen-mode');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function clearFilters() {
+    const table = document.getElementById('csvTable');
+    const rows = table.querySelectorAll('tbody tr');
+
+    rows.forEach(row => {
+        row.style.display = '';
+        row.classList.remove('selected');
+    });
+
+    // Clear sort indicators
+    table.querySelectorAll('th').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+}
+
+function exportVisible() {
+    const table = document.getElementById('csvTable');
+    const visibleRows = Array.from(table.querySelectorAll('tbody tr')).filter(row =>
+        row.style.display !== 'none'
+    );
+
+    let csvContent = '';
+
+    // Add headers
+    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+    csvContent += headers.join(',') + '\n';
+
+    // Add visible rows
+    visibleRows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td')).map(td =>
+            '"' + td.textContent.replace(/"/g, '""') + '"'
+        );
+        csvContent += cells.join(',') + '\n';
+    });
+
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'filtered_data.csv';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'F11') {
+        e.preventDefault();
+        toggleFullscreen();
+    }
+
+    if (e.ctrlKey && e.key === 'a') {
+        const table = document.getElementById('csvTable');
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => row.classList.add('selected'));
+        e.preventDefault();
+    }
+});
+
+// Smooth scrolling for table
+const tableContainer = document.querySelector('.modern-table-container');
+if (tableContainer) {
+    tableContainer.style.scrollBehavior = 'smooth';
+}
+</script>
+{% endblock %}
